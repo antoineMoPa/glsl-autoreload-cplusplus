@@ -140,7 +140,7 @@ namespace ShaderGif{
 
     void main_render(){
         glViewport(0,0,w,h);
-        
+		
         // Actual rendering
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -335,12 +335,47 @@ namespace ShaderGif{
                      GL_STATIC_DRAW);
     }
 
+	/*
+	  Gets a numeric arg like "--meow=2" or "--frame=42"
+	  where name is "meow" or "frame"
+	  
+	  returns the number, if present & valid
+	  returns -1 if arg is not present
+	  returns -2 if an error is detected, in which case it 
+	  will print an error message.
+	*/
+	static int get_positive_numeric_arg(const char * name){
+		string needle = string("--") + string(name);
+		for(int i = 0; i < argc; i++){
+			string arg = string(argv[i]);
+
+			if(int pos = arg.find(needle) == 0){
+				// find '=' sign
+				pos = arg.find("=") + 1;
+				
+				// Get the value
+				// todo: check bound and potential of by one
+				// error because it is 1h00 AM
+				int number = stoi(arg.substr(pos, arg.length() - pos + 1));
+				
+				if(number < 0){
+					cout << "Invalid number given for argument '";
+					cout << name << "'\n";
+					return -2;
+				}
+				
+				return number;
+			}
+		}
+
+		return -1;
+	}
+	
     static void apploop(){
         glutInit(&argc,argv);
+		glutInitWindowSize(w,h);
         glClearColor(0.0f,0.0f,0.0f,0.0f);
         glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
-        glutInitWindowSize(w,h);
-
         glutCreateWindow("shadergif-native");
 
         // http://gamedev.stackexchange.com/questions/22785/
@@ -382,9 +417,20 @@ namespace ShaderGif{
         for(int i = 0; i < pass_total + 1; i++){
             fbs[i].create(w, h);
         }
+
+		int frame_to_render = get_positive_numeric_arg("frame");
+
+		if(frame_to_render == -1){
+			// Enter continuous render mode
+			// The app becomes alive here
+			glutMainLoop();
+		} else {
+			// Render only one frame
+			render();
+			fbs[0].rendered_tex->save("image.bmp");
+		}
         
-        // The app becomes alive here
-        glutMainLoop();
+        
     }
 
     static void start(int _argc, char ** _argv){

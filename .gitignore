@@ -24,3 +24,12 @@
 
 # Executables
 shadergif
+
+# Images & videos
+
+*.bmp
+*.png
+*.gif
+*.ogv
+*.mp4
+*.avi

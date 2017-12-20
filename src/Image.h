@@ -29,8 +29,11 @@ public:
     }
 
     void resize(int w, int h){
+		width = w;
+		height = h;
+
         glBindTexture(GL_TEXTURE_2D, textureID);
-        
+
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
@@ -46,12 +49,12 @@ public:
         return textureID;
     }
 
-    /* Loads a bitmap (.bmp) file 
+    /* 
+	   Loads a bitmap (.bmp) file 
        Todo: Load other formats (like png)
-     */
+	*/
     bool load(const char * filename){
-        
-        textureID = SOIL_load_OGL_texture(
+		textureID = SOIL_load_OGL_texture(
                               filename,
                               SOIL_LOAD_AUTO,
                               SOIL_CREATE_NEW_ID,
@@ -66,7 +69,29 @@ public:
         
         return true;
     }
-    
+
+	/* 
+       Todo: Load other formats (like png)
+	*/
+    bool save(const char * filename){
+		
+		int save_result = SOIL_save_screenshot(
+			filename,
+			SOIL_SAVE_TYPE_BMP,
+			0,0,
+			width, height
+			);
+		
+		
+        if(save_result == 0){
+            cout << "SOIL image saving error: "
+                 << SOIL_last_result()
+                 << endl;
+        }
+        
+        return true;
+    }
+	
     void generate(){
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);
@@ -89,11 +114,12 @@ public:
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
+	
     void bind(){
         glBindTexture(GL_TEXTURE_2D, textureID);
     }
 
-    void bind(GLuint index,const char * name){
+    void bind(GLuint index, const char * name){
         GLuint shader_id = ShaderGif::current_shader->get_id();
         bind(shader_id, index, name);
     }
