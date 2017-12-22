@@ -18,6 +18,9 @@
 #include <ctime>
 #include <unistd.h>
 #include <algorithm>
+#include <sys/inotify.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "platform.h"
 #include "Shader.h"
@@ -36,7 +39,10 @@ namespace ShaderGif{
     // (and render on the quad)
     using TextureMap = std::map<std::string, Image>;
     TextureMap textures;
-
+	int inotifyFd, wd;
+	char *p;
+	struct inotify_event *event;
+	
     /*
       Contains data about an opengl framebuffer
       And the texture it gets rendered to
@@ -124,6 +130,7 @@ namespace ShaderGif{
 
     int argc;
     char ** argv;
+	float curr_time;
 
     /**
        Window resize callback
@@ -138,6 +145,30 @@ namespace ShaderGif{
         frame_count = 0;
     }
 
+	static void load_default_shaders(){
+        // default shaders
+        char * vertex_path =
+            strdup("./vertex.glsl");
+        char * frag_path =
+            strdup("./fragment.glsl");
+
+        Shader s;
+        cout << frag_path << "\n";
+        cout << vertex_path << "\n";
+        if(!s.load(vertex_path,frag_path)){
+            cout << "No default vertex & fragment shader found." << "\n";
+            exit(0);
+            return;
+        }
+        s.bind();
+
+        using new_el = ShaderMap::value_type;
+
+		shaders.erase("default");
+        shaders.insert(new_el("default",s));
+    }
+	
+	
     void main_render(){
         glViewport(0,0,w,h);
 		
@@ -151,14 +182,58 @@ namespace ShaderGif{
 		// Render the plane
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-		glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,(void*)0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 		
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		glDisableVertexAttribArray(0);
 		
-        glFlush();        
-    }
+        glFlush();
 
+		// Internet copy pasta
+		// to watch shader files
+		const int BUF_LEN = 1024;
+		char buf[BUF_LEN];
+		int numRead = -1;
+		
+		numRead = read(inotifyFd, &buf, 1);
+		bool shaders_changed = false;
+
+		while(true){
+			numRead = read(inotifyFd, buf, BUF_LEN);
+
+			if(numRead == 0){
+				cout << "read() from inotify fd returned 0!\n";
+				exit(-1);
+			}
+			
+			if(numRead == -1){
+				break;
+			}
+			
+			for(int i = 0; i < numRead; i++){
+				p = &buf[i];
+				event = (struct inotify_event *) p;
+				shaders_changed = true;
+			}
+		}
+
+		if(shaders_changed){
+			load_default_shaders();
+		}
+    }
+	
+	/*
+	  Returns current time, either as given by 
+	  argument or form system clock
+	*/
+	float get_frame_time(){
+		if(curr_time < 0.0){
+			return get_timestamp();
+		} else {
+			return curr_time;
+		}
+	}
+	
     void post_process_render(int pass){
         glViewport(0,0,w,h);
 
@@ -191,7 +266,7 @@ namespace ShaderGif{
             .get_uniform_location("time");
         
         // Bind timestamp to variable
-        glUniform1i(loc,get_timestamp());
+        glUniform1f(loc, get_frame_time());
 
         // Add render pass number
         loc = post_process_shader
@@ -288,28 +363,6 @@ namespace ShaderGif{
         frame_count++;
     }
 	
-    static void load_default_shaders(){
-        // default shaders
-        char * vertex_path =
-            strdup("./vertex.glsl");
-        char * frag_path =
-            strdup("./fragment.glsl");
-
-        Shader s;
-        cout << frag_path << "\n";
-        cout << vertex_path << "\n";
-        if(!s.load(vertex_path,frag_path)){
-            cout << "No default vertex & fragment shader found." << "\n";
-            exit(0);
-            return;
-        }
-        s.bind();
-
-        using new_el = ShaderMap::value_type;
-
-        shaders.insert(new_el("default",s));
-    }
-
     /**
        Creates the plane that will be used to render everything on
      */
@@ -336,15 +389,15 @@ namespace ShaderGif{
     }
 
 	/*
-	  Gets a numeric arg like "--meow=2" or "--frame=42"
+	  Gets a numeric arg like "--meow=2" or "--frame=42.0"
 	  where name is "meow" or "frame"
 	  
 	  returns the number, if present & valid
-	  returns -1 if arg is not present
-	  returns -2 if an error is detected, in which case it 
+	  returns -1.0 if arg is not present
+	  returns -2.0 if an error is detected, in which case it 
 	  will print an error message.
 	*/
-	static int get_positive_numeric_arg(const char * name){
+	static float get_positive_numeric_arg(const char * name){
 		string needle = string("--") + string(name);
 		for(int i = 0; i < argc; i++){
 			string arg = string(argv[i]);
@@ -356,19 +409,38 @@ namespace ShaderGif{
 				// Get the value
 				// todo: check bound and potential of by one
 				// error because it is 1h00 AM
-				int number = stoi(arg.substr(pos, arg.length() - pos + 1));
+				int number = stof(arg.substr(pos, arg.length() - pos + 1));
 				
 				if(number < 0){
 					cout << "Invalid number given for argument '";
 					cout << name << "'\n";
-					return -2;
+					return -2.0;
 				}
 				
 				return number;
 			}
 		}
 
-		return -1;
+		return -1.0;
+	}
+
+	/*
+	  Mandatory refs.:
+	  https://stackoverflow.com/questions/5616092/non-blocking-call-for-reading-descriptor
+	  http://man7.org/tlpi/code/online/diff/inotify/demo_inotify.c.html
+	 */
+	static void init_watch_files(){
+		inotifyFd = inotify_init();
+		
+		wd = inotify_add_watch(inotifyFd, "fragment.glsl", IN_MODIFY);
+
+		if(wd < 0){
+			cout << "error while creating file listener\n";
+			exit(-1);
+		}
+		
+		int flags = fcntl(inotifyFd, F_GETFL, 0);
+		fcntl(inotifyFd, F_SETFL, flags | O_NONBLOCK);
 	}
 	
     static void apploop(){
@@ -378,6 +450,8 @@ namespace ShaderGif{
         glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
         glutCreateWindow("shadergif-native");
 
+		init_watch_files();
+		
         // http://gamedev.stackexchange.com/questions/22785/
         GLenum err = glewInit();
         if (err != GLEW_OK){
@@ -418,12 +492,13 @@ namespace ShaderGif{
             fbs[i].create(w, h);
         }
 
-		int frame_to_render = get_positive_numeric_arg("frame");
-
-		if(frame_to_render == -1){
+		curr_time = get_positive_numeric_arg("time");
+		
+		if(curr_time < 0){
 			// Enter continuous render mode
 			// The app becomes alive here
 			glutMainLoop();
+			
 		} else {
 			// Render only one frame
 			render();
@@ -436,6 +511,5 @@ namespace ShaderGif{
     static void start(int _argc, char ** _argv){
         argc = _argc;
         argv = _argv;
-		
     }
 }
