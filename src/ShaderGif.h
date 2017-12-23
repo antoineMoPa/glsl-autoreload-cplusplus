@@ -153,11 +153,11 @@ namespace ShaderGif{
 			strdup("./fragment.glsl");
 
 		Shader s;
-		cout << frag_path << "\n";
-		cout << vertex_path << "\n";
+		cout << "loading" << frag_path << "\n";
+		cout << "loading" << vertex_path << "\n";
 		if(!s.load(vertex_path,frag_path)){
-			cout << "No default vertex & fragment shader found." << "\n";
-			exit(0);
+			// No shader for now
+			// the app will retry when file is modified
 			return;
 		}
 		s.bind();
