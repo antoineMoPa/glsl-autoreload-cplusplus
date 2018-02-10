@@ -1,15 +1,15 @@
 # ShaderGif native
 
-A simple command line tool to run shaders. Good for offline shader sketches.
+A simple linux command line tool to run shaders. Good for offline shader sketches.
 
-Why use a command line tool for graphical stuff? With a command-line tool, you can use your preferred editor, you can automate it, things are simple. Command lines are actually made to be used by humans.
+Why use a command line tool for graphical stuff? With a command-line tool, you can use your preferred editor, you can automate it, things are simple. Command lines are actually made to be used by humans and I want to promote the terminal.
 
 # Building:
 
 	sudo apt-get install freeglut3-dev
 	make all
-	sudo make install
-	./shadergif
+	sudo make install	# (optional)
+	./shadergif			# or just `shadergif` if you did `make install`
 
 # Removing
 
