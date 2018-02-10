@@ -31,8 +31,20 @@ You will need a vertex and a fragment shader in your working directory. You can 
 
 # Rendering a gif with imagemagick
 
-You can use this bash one-liner:
+You can use/tweak this bash one-liner:
 
 	for i in `LANG=en_US seq 0.0 0.1 1.0`; do ./shadergif --time=$i --filename=image-$i.bmp; done; convert image-*.bmp anim.gif
 
 This will create a file named anim.gif.
+
+
+# Rendering a video with avconv
+
+You can use/tweak this bash one-liner:
+
+	j=0;for i in `LANG=en_US seq 0.0 0.1 1.0`; do ./shadergif --time=$i --filename=image-`printf "%04d" $j`.bmp; j=$((1+$j)); done; avconv -i image-%04d.bmp anim.mp4
+
+To watch the video (with looping):
+
+   mplayer --loop=0 anim.mp4
+
