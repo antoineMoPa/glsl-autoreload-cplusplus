@@ -35,3 +35,4 @@ You can use this bash one-liner:
 
 	for i in `LANG=en_US seq 0.0 0.1 1.0`; do ./shadergif --time=$i --filename=image-$i.bmp; done; convert image-*.bmp anim.gif
 
+This will create a file named anim.gif.

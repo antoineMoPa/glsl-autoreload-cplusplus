@@ -430,7 +430,9 @@ void ShaderGif::apploop() {
 	glutInitWindowSize(w,h);
 	glClearColor(0.0f,0.0f,0.0f,0.0f);
 	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH);
+	// We'll show window only if not rendering a frame
 	glutCreateWindow("shadergif-native");
+	glutHideWindow();
 	
 	init_watch_files();
 	
@@ -479,8 +481,8 @@ void ShaderGif::apploop() {
 	if(curr_time < 0.0) {
 		// Enter continuous render mode
 		// The app becomes alive here
+		glutShowWindow();
 		glutMainLoop();
-		
 	} else {
 		// Render only one frame
 		render();
