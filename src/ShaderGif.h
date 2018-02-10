@@ -88,9 +88,6 @@ public:
 	static char ** argv;
 	static float curr_time;
 
-
-	ShaderGif();
-
 	static void resize(int rhs_w, int rhs_h);
 
 	static void load_default_shaders();

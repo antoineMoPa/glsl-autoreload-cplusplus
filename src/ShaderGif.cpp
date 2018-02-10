@@ -13,7 +13,7 @@ void FrameBuffer::create(int w, int h) {
 	
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, fb_id);
-	
+
 	rendered_tex = new Image(w,h);
 	
 	// Poor filtering. Needed !
@@ -50,10 +50,8 @@ void FrameBuffer::resize(int w, int h) {
 
 // Initialize static members
 
-Shader * ShaderGif::current_shader;
 Shader ShaderGif::post_process_shader;
 // This frame counter resets at frame resize
-int ShaderGif::frame_count;
 
 // The texture that we can post process
 // (and render on the quad)
@@ -62,17 +60,10 @@ TextureMap ShaderGif::textures;
 int ShaderGif::inotifyFd, ShaderGif::wd;
 char * ShaderGif::p;
 struct inotify_event * ShaderGif::event;
-bool ShaderGif::enable_2_pass_pp;
 FrameBuffer ShaderGif::fbs [pass_total + 1];
 
 // Default app path
-string ShaderGif::app_path;
 ShaderMap ShaderGif::shaders;
-
-// Window width
-int ShaderGif::w;
-// Window height
-int ShaderGif::h;
 
 // The depth buffer
 GLuint ShaderGif::depth_buf;
@@ -85,13 +76,13 @@ int ShaderGif::argc;
 char ** ShaderGif::argv;
 float ShaderGif::curr_time;
 
-ShaderGif::ShaderGif() {
-	current_shader = nullptr;
-	frame_count = 0;
-	w = h = 540;
-	enable_2_pass_pp = false;
-	app_path = "./";
-}
+Shader * ShaderGif::current_shader = nullptr;
+int ShaderGif::frame_count = 0;
+int ShaderGif::w = 540;
+int ShaderGif::h = 540;
+bool ShaderGif::enable_2_pass_pp = false;
+string ShaderGif::app_path = "./";
+
 
 /**
    Window resize callback
