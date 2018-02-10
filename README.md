@@ -9,7 +9,7 @@ Why use a command line tool for graphical stuff? With a command-line tool, you c
 	sudo apt-get install freeglut3-dev
 	make all
 	sudo make install	# (optional)
-	./shadergif			# or just `shadergif` if you did `make install`
+	./shadergif		# or just `shadergif` if you did `make install`
 
 # Removing
 
