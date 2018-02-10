@@ -46,5 +46,5 @@ You can use/tweak this bash one-liner:
 
 To watch the video (with looping):
 
-   mplayer --loop=0 anim.mp4
+	mplayer --loop=0 anim.mp4
 
