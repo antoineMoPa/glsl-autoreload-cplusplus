@@ -121,7 +121,8 @@ public:
 	  will print an error message.
 	*/
 	static float get_positive_numeric_arg(const char * name);
-
+	static string get_string_arg(const char * name);
+	
 	/*
 	  Mandatory refs.:
 	  https://stackoverflow.com/questions/5616092/non-blocking-call-for-reading-descriptor

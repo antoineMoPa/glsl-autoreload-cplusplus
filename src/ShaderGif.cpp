@@ -364,7 +364,7 @@ float ShaderGif::get_positive_numeric_arg(const char * name) {
 			// Get the value
 			// todo: check bound and potential of by one
 			// error because it is 1h00 AM
-			int number = stof(arg.substr(pos, arg.length() - pos + 1));
+			float number = stof(arg.substr(pos, arg.length() - pos + 1));
 			
 			if(number < 0) {
 				cout << "Invalid number given for argument '";
@@ -378,6 +378,33 @@ float ShaderGif::get_positive_numeric_arg(const char * name) {
 	
 	return -1.0;
 }
+
+/*
+  Gets a numeric arg like "--meow=2" or "--frame=42.0"
+  where name is "meow" or "frame"
+  
+  returns the number, if present & valid
+  returns -1.0 if arg is not present
+  returns -2.0 if an error is detected, in which case it 
+  will print an error message.
+*/
+string ShaderGif::get_string_arg(const char * name) {
+	string needle = string("--") + string(name);
+	
+	for(int i = 0; i < argc; i++) {
+		string arg = string(argv[i]);
+		
+		if(int pos = arg.find(needle) == 0) {
+			// find '=' sign
+			pos = arg.find("=") + 1;
+			
+			return arg.substr(pos, arg.length() - pos + 1);
+		}
+	}
+	
+	return string("undefined");
+}
+
 
 /*
   Mandatory refs.:
@@ -457,7 +484,11 @@ void ShaderGif::apploop() {
 	} else {
 		// Render only one frame
 		render();
-		fbs[0].rendered_tex->save("image.bmp");
+		string filename = get_string_arg("filename");
+		if(filename == "undefined") {
+			filename = "image.bmp";
+		}
+		fbs[0].rendered_tex->save(filename.c_str());
 	}
 	
 	
