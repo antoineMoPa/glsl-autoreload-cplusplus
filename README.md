@@ -1,12 +1,14 @@
 # ShaderGif native
 
-A simple linux command line tool to run shaders. Good for offline shader sketches.
+A simple linux command line tool that runs shaders. Good for offline shader sketches. Shaders are watched for modifications and updated automatically. This is coded in C++, unlike some alternatives that run a browser behind the scene. Works fine on many machines, including a chromebook with crouton.
 
-Why use a command line tool for graphical stuff? With a command-line tool, you can use your preferred editor, you can automate it, things are simple. Command lines are actually made to be used by humans and I want to promote the terminal.
+# Installing dependencies and building:
 
-# Building:
+This should work on  Ubuntu and Debian. For other distributions, you'll have to find these dependencies, it should not be too difficult.
 
-	sudo apt-get install freeglut3-dev
+	sudo apt-get install freeglut3-dev libglm-dev libglew-dev libsoil-dev
+	git clone https://github.com/antoineMoPa/shadergif-native.git
+	cd shadergif-native
 	make all
 	sudo make install	# (optional)
 	./shadergif		# or just `shadergif` if you did `make install`
