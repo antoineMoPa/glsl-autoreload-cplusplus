@@ -499,5 +499,19 @@ void ShaderGif::apploop() {
 void ShaderGif::start(int _argc, char ** _argv) {
 	argc = _argc;
 	argv = _argv;
+
+    w = (int) get_positive_numeric_arg("width");
+    h = (int) get_positive_numeric_arg("height");
+
+    if(w < 0){
+        w = 540;
+        cout << "Using default width of 540. Change this via --width=500\n";
+    }
+
+    if(h < 0){
+        h = 540;
+        cout << "Using default height of 540. Change this via --height=500\n";
+    }
+    
 }
 
