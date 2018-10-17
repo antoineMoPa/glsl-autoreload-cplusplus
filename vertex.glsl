@@ -1,12 +1,10 @@
-#version 300 es
+attribute vec3 position;
 
-// Default vertex shader
+varying vec2 UV;
+varying vec3 v_position;
 
-layout(location = 0) in vec3 v_pos;
-
-out vec2 UV;
-
-void main(){
-	UV = (v_pos.xy + 1.0) / 2.0;
-    gl_Position = vec4(v_pos, 1.0);
+void main(){	
+	v_position = position;
+	UV = vec2((position.x+1.0) / 2.0, (position.y + 1.0)/2.0);
+	gl_Position = vec4(v_position.x,v_position.y, 0.0, 1.0);
 }
