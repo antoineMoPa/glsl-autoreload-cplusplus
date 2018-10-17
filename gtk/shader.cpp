@@ -1,5 +1,9 @@
 #include <gtk/gtk.h>
 #include <gtk/gtkgl.h>
+#include <GL/glew.h>
+
+
+
 #ifdef GDK_WINDOWING_QUARTZ
 #include <OpenGL/gl.h>
 #else
@@ -10,6 +14,10 @@
 
 static guint idle_id = 0;
 static gboolean is_sync = true;
+static gboolean is_inited = false;
+
+
+GLuint quad_vertexbuffer;
 
 static void
 print_hello (GtkWidget *widget,
@@ -18,10 +26,45 @@ print_hello (GtkWidget *widget,
 	g_print ("Hello World\n");
 }
 
+/**
+   Creates the plane that will be used to render everything on
+*/
+void create_render_quad() {
+	GLuint quad_vertex_array_id;
+	// Create a quad
+	glGenVertexArrays(1, &quad_vertex_array_id);
+	/*glBindVertexArray(quad_vertex_array_id);
+	
+	static const GLfloat quad_vertex_buffer_data[] = {
+		-1.0f, 1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		-1.0f,  -1.0f, 0.0f,
+		1.0f,  -1.0f, 0.0f
+	};
+	
+	// Put the data in buffers
+	glGenBuffers(1, &quad_vertexbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+	glBufferData(GL_ARRAY_BUFFER,
+				 sizeof(quad_vertex_buffer_data),
+				 quad_vertex_buffer_data,
+				 GL_STATIC_DRAW);*/
+}
+
 void init ()
 {
 	// Only in sourceview v4
 	// gtk_source_init ();
+	GLenum err;
+	
+	err = glewInit();
+	if (err != GLEW_OK) {
+		fprintf(stderr, "GLEW initialization failed: %s\n",
+				glewGetErrorString(err));
+	}
+	
+	create_render_quad();
+	is_inited = true;
 }
 
 void close ()
@@ -44,7 +87,7 @@ idle (GtkWidget *widget)
 
   /* Update synchronously (fast). */
   if (is_sync)
-	  gdk_window_process_updates (window, FALSE);
+    gdk_window_process_updates (window, FALSE);
 
   return TRUE;
 }
@@ -71,20 +114,6 @@ idle_remove (GtkWidget *widget)
     }
 }
 
-
-static gboolean
-visible (GtkWidget          *widget,
-	 GdkEventVisibility *event,
-	 gpointer            data)
-{
-  if (event->state == GDK_VISIBILITY_FULLY_OBSCURED)
-    idle_remove (widget);
-  else
-    idle_add (widget);
-
-  return TRUE;
-}
-
 static gboolean
 map (GtkWidget   *widget,
      GdkEventAny *event,
@@ -106,14 +135,93 @@ unmap (GtkWidget   *widget,
 }
 
 static gboolean
+visible (GtkWidget          *widget,
+	 GdkEventVisibility *event,
+	 gpointer            data)
+{
+	if (event->state == GDK_VISIBILITY_FULLY_OBSCURED){
+		idle_remove (widget);
+	}
+	else
+	{
+		if (!is_inited){
+			init();
+		}
+		idle_add (widget);
+		
+	}
+
+  return TRUE;
+}
+
+/* new window size or exposure */
+static gboolean
+reshape (GtkWidget         *widget,
+	 GdkEventConfigure *event,
+	 gpointer           data)
+{
+  GtkAllocation allocation;
+
+  GLfloat h;
+
+  gtk_widget_get_allocation (widget, &allocation);
+  h = (GLfloat) (allocation.height) / (GLfloat) (allocation.width);
+
+  /*** OpenGL BEGIN ***/
+  if (!gtk_widget_begin_gl (widget))
+    return FALSE;
+
+  glViewport (0, 0, allocation.width, allocation.height);
+  glMatrixMode (GL_PROJECTION);
+  glLoadIdentity ();
+  glFrustum (-1.0, 1.0, -h, h, 5.0, 60.0);
+  glMatrixMode (GL_MODELVIEW);
+  glLoadIdentity ();
+  glTranslatef (0.0, 0.0, -40.0);
+
+  gtk_widget_end_gl (widget, FALSE);
+  /*** OpenGL END ***/
+
+  return TRUE;
+}
+
+/* change view angle, exit upon ESC */
+static gboolean
+key (GtkWidget   *widget,
+     GdkEventKey *event,
+     gpointer     data)
+{
+  GtkAllocation allocation;
+
+  gtk_widget_get_allocation (widget, &allocation);
+  gdk_window_invalidate_rect (gtk_widget_get_window (widget), &allocation, FALSE);
+
+  return TRUE;
+}
+
+static gboolean
 render (GtkWidget *widget,
 	    cairo_t   *cr,
 	    gpointer   data)
 {
+	if (!is_inited){
+		return TRUE;
+	}
+
 	glClearColor (0.5, 0.5, 0.8, 1.0);
 	glClearDepth (1.0);
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	g_print ("DRAW\n");
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDisableVertexAttribArray(0);
+	
+	glFlush();
+	
 	/*
 	// inside this function it's safe to use GL; the given
 	// #GdkGLContext has been made current to the drawable
@@ -158,9 +266,6 @@ main (int   argc,
 		return 1;
     }
 	
-	init();
-	
-	
 	view = gtk_text_view_new ();
 	buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (view));
 	gtk_text_buffer_set_text (buffer, "Hello, this is some text\n", -1);
@@ -202,15 +307,20 @@ main (int   argc,
 								  NULL,
 								  TRUE,
 								  GDK_GL_RGBA_TYPE);
+		
+	gtk_widget_add_events (drawing_area,
+						   GDK_VISIBILITY_NOTIFY_MASK);
 	
+	g_signal_connect (G_OBJECT (drawing_area), "configure_event",
+					  G_CALLBACK (reshape), NULL);
 	g_signal_connect (G_OBJECT (drawing_area), "draw",
 					  G_CALLBACK (render), NULL);
-	g_signal_connect (G_OBJECT (drawing_area), "visibility_notify_event",
-					  G_CALLBACK (visible), NULL);
 	g_signal_connect (G_OBJECT (drawing_area), "map_event",
 					  G_CALLBACK (map), NULL);
 	g_signal_connect (G_OBJECT (drawing_area), "unmap_event",
 					  G_CALLBACK (unmap), NULL);
+	g_signal_connect (G_OBJECT (drawing_area), "visibility_notify_event",
+					  G_CALLBACK (visible), NULL);
 	
 	grid = GTK_GRID (gtk_builder_get_object (builder, "grid"));
 	
